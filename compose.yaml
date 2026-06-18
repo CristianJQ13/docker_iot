@@ -28,8 +28,6 @@ services:
     build:
       context: ./clienteMqtt
     container_name: clientemqtt
-    extra_hosts: # PARA SOLUCIONAR PROBLEMAS DE NAT LOOPBACK EN LA RED LOCAL     
-      - "${SERVIDOR}:${IP_HOST_LOCAL}" # IMPORTANTE. AGREGAR EN EL .ENV LA IP LOCAL.
     environment:
       - TZ=America/Argentina/Buenos_Aires 
       - SERVIDOR=${SERVIDOR} #Se reemplazará por la env var SERVIDOR defineda en .env
@@ -107,9 +105,7 @@ services:
     image: telegrambot
     build:
       context: ./telegrambot
-    container_name: telegrambot
-    extra_hosts: # PARA SOLUCIONAR PROBLEMAS DE NAT LOOPBACK EN LA RED LOCAL     
-      - "${SERVIDOR}:${IP_HOST_LOCAL}"       
+    container_name: telegrambot   
     environment:
       - TZ=America/Argentina/Buenos_Aires 
       - TB_TOKEN=${TB_TOKEN}

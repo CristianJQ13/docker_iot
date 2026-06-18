@@ -79,7 +79,7 @@ async def cmd_rele(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_destello(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if await publicar_mqtt("destello", "1"):
-        await update.message.reply_text("Orden de destello enviada al LED de la placa.")
+        await update.message.reply_text("Orden de destello enviada al LED de la placa TZZZZZ.")
     else:
         await update.message.reply_text("Error enviando comando al broker.")
 
