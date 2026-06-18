@@ -1,9 +1,0 @@
-{% extends "layout.html" %}
-{% block body %}
-    <form method="POST" action="{{url_for('registrar')}}">
-        <input autofocus name="usuario" placeholder="Usuario" type="text">
-        <input name="password" placeholder="Contraseña" type="password">
-        <button type="submit">Aceptar</button>
-    </form>
-
-{% endblock %}

@@ -1,56 +1,99 @@
-{% extends "layout.html" %}
-{% block body %}
-<div class="row">
-  <div class="col-md-7 mx-auto">
-    <div class="card card-body">
-      <form action="{{url_for('add_contact')}}" method="POST">
-        <legend>Cargar contacto</legend>
-        <div class="form-group">
-          <label class="col-form-label mt-4" for="inputDefault">Nombre completo</label>
-          <input type="text" class="form-control" id="inputDefault" data-ddg-inputtype="unknown" name="nombre">
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Mando MQTT - Raspi Pico</title>
+  <link rel="stylesheet" href="https://bootswatch.com/5/cosmo/bootstrap.min.css">
+</head>
+
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Telecomando MQTT</a>
+      <div class="d-flex align-items-center">
+        <span class="badge bg-info text-dark">Broker: Mosquitto</span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    {% with messages = get_flashed_messages() %} 
+      {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+          <strong>{{ message }}</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        <div class="form-group">
-          <label class="col-form-label mt-4" for="tel">Teléfono</label>
-          <input type="tel" class="form-control" id="tel" data-ddg-inputtype="unknown" name="tel">
+        {% endfor %}
+      {% endif %} 
+    {% endwith %}
+  </div>
+
+  <div class="container pt-2">
+    <div class="row">
+      <div class="col-md-6 mx-auto">
+        <div class="card border-primary shadow-sm mb-3">
+          <div class="card-header bg-primary text-white">
+            <h4 class="m-0 h5">Control de Nodos Rasπ 𝝅co</h4>
+          </div>
+          <div class="card-body">
+            
+            <form action="{{ url_for('enviar_comando') }}" method="POST">
+              
+              <div class="form-group mb-4">
+                <label for="nodoInput" class="form-label fw-bold">1. Identificador del Nodo Destinatario:</label>
+                <input type="text" class="form-control" id="nodoInput" name="nodo_id" placeholder="Ej: nodo_pico_01" required>
+                <small class="text-muted">Ingresá el ID único de la Raspberry Pi Pico para armar el tópico MQTT.</small>
+              </div>
+
+              <hr class="my-4">
+
+              <div class="card bg-light border-0 mb-4">
+                <div class="card-body">
+                  <h6 class="card-title fw-bold text-secondary">Comando: Destello</h6>
+                  <p class="card-text small text-muted">Envía un pulso de activación inmediato al nodo.</p>
+                  <button type="submit" name="accion" value="destello" class="btn btn-warning w-100 fw-bold">
+                    Enviar Destello
+                  </button>
+                </div>
+              </div>
+
+              <div class="card bg-light border-0 mb-3">
+                <div class="card-body">
+                  <h6 class="card-title fw-bold text-secondary">Comando: Setpoint</h6>
+                  <p class="card-text small text-muted">Define el valor numérico de consigna para el lazo de control.</p>
+                  
+                  <div class="input-group mb-3">
+                    <span class="input-group-text">Valor</span>
+                    <input type="number" step="0.1" name="setpoint_valor" class="form-control" placeholder="Ej: 23.5" id="setpointInput">
+                  </div>
+                  
+                  <button type="submit" name="accion" value="setpoint" class="btn btn-success w-100 fw-bold">
+                    Establecer Setpoint
+                  </button>
+                </div>
+              </div>
+
+            </form>
+
+          </div>
         </div>
-        <div class="form-group">
-          <label for="email" class="form-label mt-4">Email</label>
-          <input type="email" name="email" class="form-control" id="email" aria-describedby="emailHelp"
-            data-ddg-inputtype="identities.emailAddress" data-ddg-autofill="true">
-          <small id="emailHelp" class="form-text text-muted">We'll never share your email with anyone else.</small>
-        </div>
-        <button type="submit" class="btn btn-primary mt-4">guardar</button>
-      </form>
+      </div>
     </div>
   </div>
-</div>
-<div class="row pt-5 ">
-  <div class="col-md-7 mx-auto">
-    <table class="table table-hover table-default">
-      <thead>
-        <tr>
-          <th scope="col">ID</th>
-          <th scope="col">Nombre completo</th>
-          <th scope="col">Teléfono</th>
-          <th scope="col">Email</th>
-          <th scope="col">acción</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for contacto in contactos %}
-        <tr>
-          <td>{{contacto.0}}</td>
-          <td>{{contacto.1}}</td>
-          <td>{{contacto.2}}</td>
-          <td>{{contacto.3}}</td>
-          <td>
-            <a href="{{url_for('conseguir_contacto',id=contacto.0)}}" class="btn btn-secondary">editar</a>
-            <a href="{{url_for('borrar_contacto',id=contacto.0)}}" class="btn btn-danger btn-borrar">borrar</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endblock %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    document.querySelector('button[value="setpoint"]').addEventListener('click', function(e) {
+      const input = document.getElementById('setpointInput');
+      if (!input.value) {
+        alert('Por favor, ingresá un valor numérico para el setpoint.');
+        e.preventDefault();
+      }
+    });
+  </script>
+</body>
+</html>

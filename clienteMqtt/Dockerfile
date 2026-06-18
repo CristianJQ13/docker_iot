@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 
 COPY . /app
 
-CMD ["python", "/app/clienteMqtt.py"]
+CMD ["python", "-u", "/app/clienteMqtt.py"]
