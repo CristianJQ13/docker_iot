@@ -25,10 +25,12 @@ services:
       - mariadb
   clientemqtt:
     image: clientemqtt
+    build:
+      context: ./clienteMqtt
     container_name: clientemqtt
     environment:
       - TZ=America/Argentina/Buenos_Aires 
-      - SERVIDOR=${SERVIDOR}
+      - SERVIDOR=${SERVIDOR} #Se reemplazará por la env var SERVIDOR defineda en .env
       - TOPICO=${TOPICO}
       - MARIADB_SERVER=${MARIADB_SERVER}
       - MARIADB_USER=${MARIADB_USER}
@@ -37,8 +39,6 @@ services:
       - MQTT_USR=${MQTT_USR}
       - MQTT_PASS=${MQTT_PASS}
       - PUERTO_MQTTS=${PUERTO_MQTTS}
-    extra_hosts: # PARA SOLUCIONAR PROBLEMAS DE NAT LOOPBACK EN LA RED LOCAL     
-      - "${SERVIDOR}:${IP_HOST_LOCAL}"       
     restart: unless-stopped
     depends_on:
       - mariadb
@@ -103,7 +103,9 @@ services:
     restart: unless-stopped
   telegrambot:
     image: telegrambot
-    container_name: telegrambot
+    build:
+      context: ./telegrambot
+    container_name: telegrambot   
     environment:
       - TZ=America/Argentina/Buenos_Aires 
       - TB_TOKEN=${TB_TOKEN}
@@ -111,30 +113,14 @@ services:
       - MARIADB_USER=${MARIADB_USER}
       - MARIADB_USER_PASS=${MARIADB_USER_PASS}
       - MARIADB_DB=${MARIADB_DB}
-    restart: unless-stopped
-    depends_on:
-      - mariadb
-  crud:
-    image: crud
-    build:
-      context: ./crud
-    container_name: crud
-    environment:
-      - MYSQL_USER=${CRUD_USER}
-      - MYSQL_PASSWORD=${CRUD_PASS}
-      - MYSQL_DB=${CRUD_DB}
-      - MYSQL_HOST=${MARIADB_SERVER}
-      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
       - SERVIDOR=${SERVIDOR}
-      - PUERTO_MQTTS=${PUERTO_MQTTS}
       - MQTT_USR=${MQTT_USR}
       - MQTT_PASS=${MQTT_PASS}
-    extra_hosts: # PARA SOLUCIONAR PROBLEMAS DE NAT LOOPBACK EN LA RED LOCAL     
-      - "${SERVIDOR}:${IP_HOST_LOCAL}"       
-    ports:
-      - "8000:8000"
+      - PUERTO_MQTTS=${PUERTO_MQTTS}
+      - DISPOSITIVO_ID=${DISPOSITIVO_ID} # Como no tenía para probar, usé uno de prueba
     restart: unless-stopped
     depends_on:
       - mariadb
+      - mosquitto
 volumes:
   portainer_data:

@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS `nodos` (
+  `id` VARCHAR(50) PRIMARY KEY,
+  `descripcion` VARCHAR(100) NOT NULL
+);

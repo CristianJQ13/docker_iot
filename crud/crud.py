@@ -29,9 +29,7 @@ def publicar_mqtt(topico, payload):
         )
     
         contexto_ssl = ssl.create_default_context()
-
         contexto_ssl.check_hostname = False 
-        
         cliente.tls_set_context(contexto_ssl)
         
         host = os.environ.get("SERVIDOR")
@@ -59,7 +57,46 @@ def publicar_mqtt(topico, payload):
 # Rutas de interfaz
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        # Usamos mysql para leer los nodos desde la base de datos (rehuso agenda.sql con tabla nueva nodos)
+        cur = mysql.connection.cursor()
+        cur.execute("SELECT id, descripcion FROM nodos")
+        columnas = [col[0] for col in cur.description]
+        
+        # Mapeamos diccionarios para que Jinja los lea limpio como n.id y n.descripcion
+        lista_nodos = [dict(zip(columnas, row)) for row in cur.fetchall()]
+        cur.close()
+    except Exception as e:
+        lista_nodos = []
+        logging.error(f"Error cargando nodos desde MySQL: {str(e)}")
+        flash("Error de conexión con la base de datos al recuperar dispositivos.")
+        
+    return render_template('index.html', lista_nodos=lista_nodos)
+
+
+@app.route('/registrar_nodo', methods=['POST'])
+def registrar_nodo():
+    if request.method == 'POST':
+        nodo_id = request.form.get('nuevo_nodo_id', '').strip()
+        nodo_desc = request.form.get('nuevo_nodo_desc', '').strip()
+        
+        if not nodo_id or not nodo_desc:
+            flash("Error: El ID del nodo y su descripción son obligatorios.")
+            return redirect(url_for('index'))
+            
+        try:
+            cur = mysql.connection.cursor()
+            sql = "INSERT INTO nodos (id, descripcion) VALUES (%s, %s)"
+            cur.execute(sql, (nodo_id, nodo_desc))
+            mysql.connection.commit()
+            cur.close()
+            flash(f"Dispositivo '{nodo_id}' registrado exitosamente en la BD.")
+        except Exception as e:
+            logging.error(f"Error al registrar nodo en la BD: {str(e)}")
+            flash("No se pudo registrar. Comprobá si el ID de esa Pico ya existe.")
+            
+    return redirect(url_for('index'))
+
 
 @app.route('/enviar_comando', methods=['POST'])
 def enviar_comando():
@@ -72,9 +109,8 @@ def enviar_comando():
             return redirect(url_for('index'))
             
         if accion == 'destello':
-            # Estructura del tópico
             topico = f"nodos/{nodo_id}/destello"
-            payload = "1" # Pulso de activación
+            payload = "1"
             
             if publicar_mqtt(topico, payload):
                 flash(f"Comando DESTELLO enviado al nodo '{nodo_id}'")

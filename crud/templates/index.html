@@ -11,9 +11,9 @@
 
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
     <div class="container-fluid">
-      <a class="navbar-brand" href="#">Telecomando MQTT</a>
+      <a class="navbar-brand" href="#">Comando MQTT</a>
       <div class="d-flex align-items-center">
-        <span class="badge bg-info text-dark">Broker: Mosquitto</span>
+        <span class="badge bg-light text-primary border border-primary-subtle">Broker: Mosquitto</span>
       </div>
     </div>
   </nav>
@@ -34,18 +34,57 @@
   <div class="container pt-2">
     <div class="row">
       <div class="col-md-6 mx-auto">
+        
+        <div class="card border-secondary shadow-sm mb-4">
+          <div class="card-header bg-dark text-white p-2 d-flex justify-content-between align-items-center">
+            <h5 class="m-0 h6">Administración de Dispositivos</h5>
+            <button class="btn btn-sm btn-outline-light py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseReg">
+              + Registrar
+            </button>
+          </div>
+          <div class="collapse" id="collapseReg">
+            <div class="card-body bg-white border-top">
+              <form action="{{ url_for('registrar_nodo') }}" method="POST">
+                <div class="row g-2">
+                  <div class="col-6">
+                    <input type="text" name="nuevo_nodo_id" class="form-control form-control-sm" placeholder="ID (ej: nodo_01)" required>
+                  </div>
+                  <div class="col-6">
+                    <input type="text" name="nuevo_nodo_desc" class="form-control form-control-sm" placeholder="Ubicación/Descripción" required>
+                  </div>
+                  <div class="col-12 text-end mt-2">
+                    <button type="submit" class="btn btn-sm btn-dark">Guardar en Base de Datos</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
         <div class="card border-primary shadow-sm mb-3">
           <div class="card-header bg-primary text-white">
-            <h4 class="m-0 h5">Control de Nodos Rasπ 𝝅co</h4>
+            <h4 class="m-0 h5">Control de Nodos Raspi Pico</h4>
           </div>
           <div class="card-body">
             
             <form action="{{ url_for('enviar_comando') }}" method="POST">
               
               <div class="form-group mb-4">
-                <label for="nodoInput" class="form-label fw-bold">1. Identificador del Nodo Destinatario:</label>
-                <input type="text" class="form-control" id="nodoInput" name="nodo_id" placeholder="Ej: nodo_pico_01" required>
-                <small class="text-muted">Ingresá el ID único de la Raspberry Pi Pico para armar el tópico MQTT.</small>
+                <label class="form-label fw-bold">1. Identificador del Nodo Destinatario:</label>
+                <div class="mt-2">
+                  {% if lista_nodos %}
+                    {% for n in lista_nodos %}
+                    <div class="form-check mb-2">
+                      <input class="form-check-input" type="radio" name="nodo_id" id="radio_{{ n.id }}" value="{{ n.id }}" {% if loop.first %}checked{% endif %} required>
+                      <label class="form-check-label" for="radio_{{ n.id }}">
+                        <strong>{{ n.id }}</strong> <span class="text-muted">({{ n.descripcion }})</span>
+                      </label>
+                    </div>
+                    {% endfor %}
+                  {% else %}
+                    <div class="alert alert-warning py-2 small">No hay nodos registrados en la base de datos. Usa el panel de arriba para añadir uno.</div>
+                  {% endif %}
+                </div>
               </div>
 
               <hr class="my-4">
@@ -53,8 +92,8 @@
               <div class="card bg-light border-0 mb-4">
                 <div class="card-body">
                   <h6 class="card-title fw-bold text-secondary">Comando: Destello</h6>
-                  <p class="card-text small text-muted">Envía un pulso de activación inmediato al nodo.</p>
-                  <button type="submit" name="accion" value="destello" class="btn btn-warning w-100 fw-bold">
+                  <p class="card-text small text-muted">Pulso de activación inmediato .</p>
+                  <button type="submit" name="accion" value="destello" class="btn btn-primary w-100 fw-bold">
                     Enviar Destello
                   </button>
                 </div>
@@ -63,14 +102,14 @@
               <div class="card bg-light border-0 mb-3">
                 <div class="card-body">
                   <h6 class="card-title fw-bold text-secondary">Comando: Setpoint</h6>
-                  <p class="card-text small text-muted">Define el valor numérico de consigna para el lazo de control.</p>
+                  <p class="card-text small text-muted">Valor numérico de temperatura en °C.</p>
                   
                   <div class="input-group mb-3">
                     <span class="input-group-text">Valor</span>
-                    <input type="number" step="0.1" name="setpoint_valor" class="form-control" placeholder="Ej: 23.5" id="setpointInput">
+                    <input type="number" step="0.1" name="setpoint_valor" class="form-control" placeholder="" id="setpointInput">
                   </div>
                   
-                  <button type="submit" name="accion" value="setpoint" class="btn btn-success w-100 fw-bold">
+                  <button type="submit" name="accion" value="setpoint" class="btn btn-primary w-100 fw-bold">
                     Establecer Setpoint
                   </button>
                 </div>
