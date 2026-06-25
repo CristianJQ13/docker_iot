@@ -154,6 +154,9 @@ services:
       - SERVIDOR=${SERVIDOR}
       - INFLUX_SERVER=${INFLUX_SERVER}
       - INFLUX_TOKEN=${INFLUX_TOKEN}
+      - INFLUX_URL=${INFLUX_URL}
+      - TB_TOKEN=${TB_TOKEN}
+      - TB_CHAT_ID=${TB_CHAT_ID}
     volumes:
       - ./node-red:/data
     restart: unless-stopped
