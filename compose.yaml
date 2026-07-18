@@ -30,18 +30,25 @@ services:
     container_name: clientemqtt
     environment:
       - TZ=America/Argentina/Buenos_Aires 
-      - SERVIDOR=${SERVIDOR} #Se reemplazará por la env var SERVIDOR defineda en .env
+      - SERVIDOR=${SERVIDOR}
       - TOPICO=${TOPICO}
+      - TOPICO_ALERTA=${TOPICO_ALERTA}
       - MARIADB_SERVER=${MARIADB_SERVER}
       - MARIADB_USER=${MARIADB_USER}
       - MARIADB_USER_PASS=${MARIADB_USER_PASS}
       - MARIADB_DB=${MARIADB_DB}
+      - MARIADB_DB_AUDIO=${MARIADB_DB_AUDIO}
+      - MARIADB_TABLE_AUDIO=${MARIADB_TABLE_AUDIO}
+      - MODELO_PATH=${MODELO_PATH}
       - MQTT_USR=${MQTT_USR}
       - MQTT_PASS=${MQTT_PASS}
       - PUERTO_MQTTS=${PUERTO_MQTTS}
+      - DISPOSITIVO_ID=${DISPOSITIVO_ID}
+      - TOPICO_MODO=${TOPICO_MODO}
     restart: unless-stopped
     depends_on:
       - mariadb
+      - mosquitto
   mosquitto:
     image: eclipse-mosquitto
     container_name: mosquitto
@@ -69,7 +76,6 @@ services:
     environment:
       GF_SERVER_PROTOCOL: http
       GF_SERVER_ROOT_URL: https://${DOMINIO}:${PUERTO}/grafana/
-      # GF_SERVER_SERVE_FROM_SUB_PATH: "true"
       GF_SERVER_DOMAIN: https://${DOMINIO}
       GF_ANALYTICS_REPORTING_ENABLED: "false"
     restart: unless-stopped
@@ -109,6 +115,7 @@ services:
     environment:
       - TZ=America/Argentina/Buenos_Aires 
       - TB_TOKEN=${TB_TOKEN}
+      - TB_CHAT_ID=${TB_CHAT_ID}
       - MARIADB_SERVER=${MARIADB_SERVER}
       - MARIADB_USER=${MARIADB_USER}
       - MARIADB_USER_PASS=${MARIADB_USER_PASS}
@@ -117,7 +124,9 @@ services:
       - MQTT_USR=${MQTT_USR}
       - MQTT_PASS=${MQTT_PASS}
       - PUERTO_MQTTS=${PUERTO_MQTTS}
-      - DISPOSITIVO_ID=${DISPOSITIVO_ID} # Como no tenía para probar, usé uno de prueba
+      - TOPICO_ALERTA=${TOPICO_ALERTA}
+      - TOPICO_ESTADO=${TOPICO_ESTADO}
+      - DISPOSITIVO_ID=${DISPOSITIVO_ID}
     restart: unless-stopped
     depends_on:
       - mariadb

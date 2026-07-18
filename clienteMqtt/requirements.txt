@@ -1,4 +1,8 @@
 aiomqtt
+aiomysql
 certifi
 environs
-aiomysql
+numpy
+scipy
+librosa
+tensorflow-cpu
