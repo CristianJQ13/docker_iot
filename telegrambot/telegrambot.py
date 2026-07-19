@@ -15,17 +15,14 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# --- VARIABLES DE ENTORNO ---
 BOT_TOKEN = os.environ["TB_TOKEN"]
 CHAT_ID = int(os.environ["TB_CHAT_ID"])
 
 BROKER = os.environ["SERVIDOR"]
 PORT = int(os.environ["PUERTO_MQTTS"])
 TOPICO_ALERTA = os.environ["TOPICO_ALERTA"]
-TOPICO_ESTADO = os.environ["TOPICO_ESTADO"]  # Ej: id_prueba/estado
+TOPICO_ESTADO = os.environ["TOPICO_ESTADO"]  
 
-# Tópicos derivados para configuración en tiempo real (basados en la raíz de TOPICO_ESTADO)
-# Si TOPICO_ESTADO es "id_prueba/estado", esto genera "id_prueba/modo" e "id_prueba/umbral"
 BASE_TOPIC = TOPICO_ESTADO.rsplit("/", 1)[0]
 TOPICO_MODO = f"{BASE_TOPIC}/modo"
 TOPICO_UMBRAL = f"{BASE_TOPIC}/umbral"
@@ -35,60 +32,56 @@ MQTT_PASS = os.environ.get("MQTT_PASS", "")
 
 mqtt_client: aiomqtt.Client = None
 
-# Bandera para evitar que el bot repita en el chat un cambio que nosotros mismos acabamos de pedir desde Telegram
+# Para evitar que el bot repita en el chat un cambio que yo pedi desde Telegram
 cambio_solicitado_por_telegram = False
 
-# --- TECLADO INFERIOR PERMANENTE ---
+# Teclado inferior con botones
 def teclado_persistente():
-    """Teclado FIJO en la barra inferior donde se escribe. Nunca desaparece."""
     return ReplyKeyboardMarkup(
-        [["🟢 Encender Sistema", "🔴 Apagar Sistema"]],
+        [["🟢 Encender", "🔴 Apagar"]],
         resize_keyboard=True,
         is_persistent=True
     )
 
-# --- HANDLERS DE COMANDOS DE TELEGRAM ---
+# Handlers de comandos
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != CHAT_ID:
         return
-    
+    # Para actualizar cuando no se le da la gana de hacerlo solo
     await update.message.reply_text(
-        "🔄 Limpiando caché de teclados anteriores...",
+        "Limpiando caché de teclados anteriores...",
         reply_markup=ReplyKeyboardRemove()
     )
     await asyncio.sleep(0.5)
     
     await update.message.reply_text(
-        "🎛️ **Panel de Control Acústico**\n\n"
-        "Comandos disponibles para configuración en vivo:\n"
+        "**Panel de control**\n\n"
+        "Comandos disponibles para configuración:\n"
         "• `/modo auto` -> Solo detección nocturna por micrófono\n"
         "• `/modo manual` -> Solo disparo por pulsador físico\n"
-        "• `/modo ambos` -> Micrófono y pulsador activos simultáneamente\n"
         "• `/umbral <10-100>` -> Ajusta la sensibilidad del micrófono\n\n"
-        "El teclado de encendido/apagado general está fijado en la barra inferior:",
+        "El teclado de encendido/apagado está fijado en la barra inferior",
         reply_markup=teclado_persistente(),
         parse_mode="Markdown"
     )
     logging.info("Teclado y menú actualizados mediante /start")
 
+# Función para cambio de modo
 async def cmd_modo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Cambia el modo de disparo del sistema en la RAM de la Raspi."""
     if update.effective_chat.id != CHAT_ID:
         return
     
     if not mqtt_client:
-        await update.message.reply_text("⚠️ **Error:** El bot no está conectado al broker MQTT actualmente.", parse_mode="Markdown")
+        await update.message.reply_text("**Error:** El bot no está conectado al broker MQTT.", parse_mode="Markdown")
         return
 
-    # Validamos si el usuario pasó un argumento (ej. /modo auto)
     if not context.args:
         await update.message.reply_text(
-            "⚙️ **Configuración de Modo Operativo**\n\n"
-            "Debes indicar qué modo deseas activar. Ejemplo: `/modo auto`\n\n"
+            "**Configuración de Modo**\n\n"
+            "Indicar qué modo deseas activar. Ejemplo: `/modo auto`\n\n"
             "**Opciones disponibles:**\n"
             "• `manual` -> Disparo exclusivo por botón pulsador.\n"
-            "• `auto` -> Disparo exclusivo por detección de ruido/llanto.\n"
-            "• `ambos` -> Escucha el micrófono y permite usar el pulsador.",
+            "• `auto` -> Disparo exclusivo por detección de ruido/llanto.\n",
             parse_mode="Markdown",
             reply_markup=teclado_persistente()
         )
@@ -98,40 +91,40 @@ async def cmd_modo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if modo_elegido not in ["manual", "auto", "ambos"]:
         await update.message.reply_text(
-            "❌ **Modo inválido.** Por favor elige únicamente entre: `manual`, `auto` o `ambos`.",
+            "**Modo inválido.** Elige entre: `manual`, `auto`.",
             parse_mode="Markdown",
             reply_markup=teclado_persistente()
         )
         return
 
-    # Publicamos con retain=True para que la Raspi lo recuerde si se reinicia
+    # Publico con retain=True para que la Raspi lo recuerde si se reinicia
     await mqtt_client.publish(TOPICO_MODO, payload=modo_elegido, qos=1, retain=True)
     
-    iconos = {"manual": "🔘", "auto": "🌙", "ambos": "⚡"}
+    iconos = {"manual": "🔘", "auto": "🌙", "ambos": " "}
     await update.message.reply_text(
-        f"{iconos[modo_elegido]} Modo operativo configurado a: **{modo_elegido.upper()}**\n"
-        f"La memoria RAM de la Raspberry Pi ha sido actualizada.",
+        f"{iconos[modo_elegido]} Modo configurado en: **{modo_elegido.upper()}**\n"
+        f"Memoria actualizada.",
         parse_mode="Markdown",
         reply_markup=teclado_persistente()
     )
     logging.info(f"[TELEGRAM -> MQTT] Modo cambiado a {modo_elegido}")
 
+# Función para elegir el umbral de sensibilidad
 async def cmd_umbral(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ajusta la sensibilidad (umbral de volumen 10-100%) en la RAM de la Raspi."""
     if update.effective_chat.id != CHAT_ID:
         return
     
     if not mqtt_client:
-        await update.message.reply_text("⚠️ **Error:** El bot no está conectado al broker MQTT actualmente.", parse_mode="Markdown")
+        await update.message.reply_text("**Error:** El bot no está conectado al broker MQTT actualmente.", parse_mode="Markdown")
         return
 
     if not context.args:
         await update.message.reply_text(
-            "🎯 **Calibración de Sensibilidad**\n\n"
-            "Debes indicar un número entre **10** y **100**. Ejemplo: `/umbral 45`\n\n"
-            "• **10-30%:** Muy sensible (para habitaciones extremadamente silenciosas).\n"
-            "• **40-60%:** Recomendado para detección nocturna estándar.\n"
-            "• **70-100%:** Poco sensible (solo detecta ruidos muy fuertes o cercanos).",
+            "**Selección de Sensibilidad**\n\n"
+            "Indicar número entre **10** y **100**. Ejemplo: `/umbral 45`\n\n"
+            "• **10-30%:** Muy sensible.\n"
+            "• **40-60%:** Intermedio.\n"
+            "• **70-100%:** Poco sensible.",
             parse_mode="Markdown",
             reply_markup=teclado_persistente()
         )
@@ -143,7 +136,7 @@ async def cmd_umbral(update: Update, context: ContextTypes.DEFAULT_TYPE):
             raise ValueError
     except ValueError:
         await update.message.reply_text(
-            "❌ **Valor inválido.** Por favor ingresa un número entero entre **10** y **100**.",
+            "**Valor inválido.** Ingresa un número entero entre **10** y **100**.",
             parse_mode="Markdown",
             reply_markup=teclado_persistente()
         )
@@ -152,15 +145,15 @@ async def cmd_umbral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await mqtt_client.publish(TOPICO_UMBRAL, payload=str(valor_umbral), qos=1, retain=True)
     
     await update.message.reply_text(
-        f"🎯 Umbral de ruido acústico ajustado al **{valor_umbral}%**\n"
+        f"Umbral ajustado a **{valor_umbral}%**\n"
         f"El micrófono ahora disparará alertas cuando el sonido supere este nivel de forma sostenida.",
         parse_mode="Markdown",
         reply_markup=teclado_persistente()
     )
     logging.info(f"[TELEGRAM -> MQTT] Umbral cambiado a {valor_umbral}%")
 
+# Procesado de los botones permanentes
 async def texto_teclado(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Procesa los clics del teclado fijo inferior permanente en Telegram."""
     global cambio_solicitado_por_telegram
     if update.effective_chat.id != CHAT_ID or not mqtt_client:
         return
@@ -170,7 +163,7 @@ async def texto_teclado(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cambio_solicitado_por_telegram = True
         await mqtt_client.publish(TOPICO_ESTADO, payload="ON", qos=1, retain=True)
         await update.message.reply_text(
-            "🟢 Sistema **ACTIVADO** (`ON`) desde Telegram.\nLa Raspi vuelve a tomar lecturas del MAX9814.",
+            "🟢 Sistema **ENCENDIDO** (`ON`) desde Telegram.",
             parse_mode="Markdown",
             reply_markup=teclado_persistente()
         )
@@ -179,13 +172,13 @@ async def texto_teclado(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cambio_solicitado_por_telegram = True
         await mqtt_client.publish(TOPICO_ESTADO, payload="OFF", qos=1, retain=True)
         await update.message.reply_text(
-            "🔴 Sistema **APAGADO** (`OFF`) desde Telegram.\nLecturas de micrófono suspendidas.",
+            "🔴 Sistema **APAGADO** (`OFF`) desde Telegram.",
             parse_mode="Markdown",
             reply_markup=teclado_persistente()
         )
         logging.info("[TELEGRAM -> MQTT] Estado cambiado a OFF")
 
-# --- FUNCIONES DE AUDIO Y NOTIFICACIÓN ---
+# Funciones de audio y notificación
 async def enviar_audio(bot, audio_bytes):
     logging.info("Generando archivo WAV en memoria RAM...")
     wav_buffer = BytesIO()
@@ -199,20 +192,20 @@ async def enviar_audio(bot, audio_bytes):
     wav_buffer.seek(0)
     wav_buffer.name = "alerta_llanto.wav"
 
-    logging.info("Enviando audio reproducible a Telegram...")
+    logging.info("Enviando audio a Telegram...")
     
     await bot.send_audio(
         chat_id=CHAT_ID,
         audio=wav_buffer,
-        caption="🚨 ¡ALERTA! Se detectó llanto/ruido en la habitación.",
-        title="Alerta de Llanto",
+        caption="¡ATENCIÓN! Se detectó llanto/ruido en la habitación.",
+        title="Audio grabado",
         performer="Raspberry Pi Pico W",
         reply_markup=teclado_persistente()
     )
     logging.info("Audio enviado correctamente.")
 
 async def procesar_cambio_estado(bot, payload_str):
-    """Notifica en el chat cuando el estado cambia físicamente en la Raspi."""
+    # Notifico en el chat cuando el estado físico de la Raspi cambia
     global cambio_solicitado_por_telegram
     
     if cambio_solicitado_por_telegram:
@@ -221,9 +214,9 @@ async def procesar_cambio_estado(bot, payload_str):
 
     estado_upper = payload_str.upper()
     if estado_upper in ["ON", "1", "TRUE"]:
-        texto = "🛠️ **¡Atención!**\nEl monitoreo acústico fue **ACTIVADO físicamente** desde el botón de la Raspberry Pi."
+        texto = "**¡Atención!**\nEl sistema fue **ENCENDIDO físicamente** desde la Raspberry Pi."
     elif estado_upper in ["OFF", "0", "FALSE"]:
-        texto = "🛠️ **¡Atención!**\nEl monitoreo acústico fue **APAGADO físicamente** desde el botón de la Raspberry Pi."
+        texto = "**¡Atención!**\nEl sistema fue **APAGADO físicamente** desde la Raspberry Pi."
     else:
         return
 
@@ -235,7 +228,7 @@ async def procesar_cambio_estado(bot, payload_str):
         reply_markup=teclado_persistente()
     )
 
-# --- BUCLE DE ESCUCHA MQTT ---
+# Bucle de escucha MQTT
 async def escuchar_mqtt(bot):
     global mqtt_client
     tls_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -275,11 +268,11 @@ async def escuchar_mqtt(bot):
             except Exception as e:
                 logging.exception(e)
 
-# --- BUCLE PRINCIPAL ASÍNCRONO ---
+# Bucle principal asíncrono
 async def main():
     app = Application.builder().token(BOT_TOKEN).build()
     
-    # Registramos los comandos incluyendo los nuevos /modo y /umbral
+    # Registro los comandos
     app.add_handler(CommandHandler(["start", "menu", "reset", "estado"], cmd_start))
     app.add_handler(CommandHandler("modo", cmd_modo))
     app.add_handler(CommandHandler("umbral", cmd_umbral))

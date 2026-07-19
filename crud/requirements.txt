@@ -1,0 +1,4 @@
+Flask==3.0.3
+Flask-MySQLdb==2.0.0
+paho-mqtt==1.6.1
+Werkzeug==3.0.3

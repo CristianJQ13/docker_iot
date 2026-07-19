@@ -131,5 +131,28 @@ services:
     depends_on:
       - mariadb
       - mosquitto
+  crud:
+    build:
+      context: ./crud
+    container_name: crud_flask
+    environment:
+      - TZ=America/Argentina/Buenos_Aires
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - MARIADB_SERVER=mariadb
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_USER_PASS=${MARIADB_USER_PASS}
+      - MARIADB_DB_AUDIO=${MARIADB_DB_AUDIO}
+      - MARIADB_TABLE_AUDIO=${MARIADB_TABLE_AUDIO}
+      - SERVIDOR=${SERVIDOR}
+      - PUERTO_MQTTS=${PUERTO_MQTTS}
+      - MQTT_USR=${MQTT_USR}
+      - MQTT_PASS=${MQTT_PASS}
+      - TOPICO_MODO=${TOPICO_MODO}
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+      - mosquitto
 volumes:
   portainer_data:
